@@ -122,4 +122,4 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
                 st.error("The AI returned an empty response. Please try rephrasing.")
             
         except Exception as e:
-            st.error(f"Technical Error: {e}")}")
+            st.error(f"Technical Error: {e}")
