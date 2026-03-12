@@ -77,34 +77,30 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             hits = util.semantic_search(query_emb, fish_embeddings, top_k=3)[0]
             context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
 
-        # 2. GENERATION
+        # 2. GENERATION (Using text_generation to bypass "Chat Model" errors)
         placeholder = st.empty()
         full_response = ""
         
-        system_instruction = f"You are AQUARIA, a professional freshwater expert. Use this DATA: {context_data}"
-        
-        messages = [
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": prompt}
-        ]
+        # We manually format the prompt for the model
+        formatted_prompt = f"<s>[INST] You are AQUARIA, a freshwater expert. Use this DATA: {context_data}\n\nUser: {prompt} [/INST]"
 
         try:
-            for message in client.chat_completion(
-                messages=messages,
-                max_tokens=450, 
+            # text_generation is more reliable for free-tier Mistral models
+            for token in client.text_generation(
+                formatted_prompt,
+                max_new_tokens=450,
                 stream=True,
-                temperature=0.6
+                temperature=0.6,
+                stop_sequences=["</s>", "[/INST]"]
             ):
-                token = message.choices[0].delta.content
-                if token:
-                    full_response += token
-                    placeholder.markdown(full_response + "▌")
+                full_response += token
+                placeholder.markdown(full_response + "▌")
             
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
             if "401" in str(e):
-                st.error("Authentication Error: Please check your HF_TOKEN in Streamlit Secrets and reboot the app.")
+                st.error("Authentication Error: Your token was rejected. Please check Streamlit Secrets and reboot.")
             else:
                 st.error(f"Technical Error: {e}")
