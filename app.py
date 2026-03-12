@@ -76,27 +76,31 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # RETRIEVAL (Your Colab Semantic Search)
-        query_emb = embedder.encode(prompt, convert_to_tensor=True)
-        hits = util.semantic_search(query_emb, fish_embeddings, top_k=3)[0]
-        context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
+        # Use a spinner so the user knows AQUARIA is working
+        with st.spinner("Searching fish database..."):
+            # 1. RETRIEVAL
+            query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu") # Force CPU
+            hits = util.semantic_search(query_emb, fish_embeddings, top_k=3)[0]
+            context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
 
-        # GENERATION (Cloud-Safe Streaming)
+        # 2. GENERATION
         placeholder = st.empty()
         full_response = ""
         
+        # Optimized prompt for Zephyr-7B
+        system_instruction = f"You are AQUARIA, a professional freshwater expert. Only use the following data to answer. If not in data, give a safe general tip. DATA: {context_data}"
+        
         messages = [
-            {"role": "system", "content": f"You are AQUARIA, a professional expert. Use this data: {context_data}"},
+            {"role": "system", "content": system_instruction},
             {"role": "user", "content": prompt}
         ]
 
         try:
-            # Using chat_completion for 'conversational' task support
             for message in client.chat_completion(
                 messages=messages,
-                max_tokens=500,
+                max_tokens=400, # Shortened tokens = faster response
                 stream=True,
-                temperature=0.7
+                temperature=0.5 # Lower temp = more direct/faster answers
             ):
                 token = message.choices[0].delta.content
                 if token:
@@ -107,4 +111,4 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Generation Error: {e}")
+            st.error(f"AQUARIA is currently resting (API Busy). Please try again in 10 seconds.")
