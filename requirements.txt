@@ -1,7 +1,4 @@
 streamlit
 pandas
 sentence-transformers
-# We use the CPU version of torch to prevent installation errors
-torch --index-url https://download.pytorch.org/whl/cpu
-transformers
-accelerate
+huggingface_hub
