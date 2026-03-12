@@ -12,18 +12,19 @@ MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
-    # This pulls the token from the Streamlit Cloud Dashboard "Secrets" section
+    # strip() is essential to handle invisible formatting characters from copy-pasting
     HF_TOKEN = st.secrets["HF_TOKEN"].strip()
 except KeyError:
     st.error("HF_TOKEN not found in Streamlit Secrets. Go to 'Manage App' -> 'Settings' -> 'Secrets'.")
     st.stop()
 
+# Long timeout (3 mins) to prevent 503 errors during free-tier "cold starts"
 client = InferenceClient(model=MODEL_ID, token=HF_TOKEN, timeout=180)
 
 # --- 3. DATA & RAG RESOURCES ---
 @st.cache_resource
 def init_resources():
-    # Force CPU for Streamlit Cloud compatibility
+    # Force CPU for Streamlit Cloud stability
     embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
     df = pd.read_csv(csv_path, encoding="latin1").fillna("Not specified")
 
@@ -69,11 +70,13 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
+        # 1. RETRIEVAL
         with st.spinner("Consulting the fish scrolls..."):
             query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu")
             hits = util.semantic_search(query_emb, fish_embeddings, top_k=3)[0]
             context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
 
+        # 2. GENERATION
         placeholder = st.empty()
         full_response = ""
         
@@ -100,5 +103,7 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            # Displays the real technical error (429, 503, etc.) for troubleshooting
-            st.error(f"Technical Error: {e}")
+            if "401" in str(e):
+                st.error("Authentication Error: Please check your HF_TOKEN in Streamlit Secrets and reboot the app.")
+            else:
+                st.error(f"Technical Error: {e}")
