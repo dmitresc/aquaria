@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 st.set_page_config(page_title="AQUARIA", layout="wide", page_icon="🐠")
 
 # --- 2. CONFIGURATION & SECRETS ---
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
+MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
@@ -18,7 +18,7 @@ except KeyError:
     st.stop()
 
 # Added timeout=120 to handle "API Busy" errors better
-client = InferenceClient(model=MODEL_ID, token=HF_TOKEN, timeout=120)
+client = InferenceClient(model=MODEL_ID, token=HF_TOKEN, timeout=180)
 
 # --- 3. DATA & RAG RESOURCES ---
 @st.cache_resource
@@ -105,5 +105,6 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
-        except Exception as e:
-            st.error("AQUARIA is a bit overwhelmed right now. Please wait a few seconds and try your question again!")
+     except Exception as e:
+            # This will show the actual technical error (429, 503, etc.)
+            st.error(f"Technical Error: {e}")
