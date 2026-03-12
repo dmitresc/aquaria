@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 st.set_page_config(page_title="AQUARIA", layout="wide", page_icon="🐠")
 
 # --- 2. CONFIGURATION & SECRETS ---
-MODEL_ID = "HuggingFaceH4/zephyr-7b-beta"
+MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
