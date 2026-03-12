@@ -69,29 +69,33 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. RETRIEVAL WITH SAFETY CHECK
+        # 1. RETRIEVAL WITH MULTI-LAYER SAFETY
         with st.spinner("Consulting the fish scrolls..."):
-            query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu")
-            search_results = util.semantic_search(query_emb, fish_embeddings, top_k=5)
-            
-            # Check if we actually got results back
-            if search_results and len(search_results[0]) > 0:
-                hits = search_results[0]
-                context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
-            else:
-                context_data = "No specific data found in the database."
+            try:
+                query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu")
+                search_results = util.semantic_search(query_emb, fish_embeddings, top_k=3)
+                
+                # Check if search_results is not empty and contains data
+                if search_results and len(search_results) > 0 and len(search_results[0]) > 0:
+                    hits = search_results[0]
+                    context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
+                else:
+                    context_data = "No specific data found in the database."
+            except Exception as e:
+                context_data = "Error accessing the database."
+                st.warning(f"Search Warning: {e}")
 
-        # 2. GENERATION
+        # 2. GENERATION WITH LLAMA 3
         placeholder = st.empty()
         full_response = ""
         
         messages = [
-            {"role": "system", "content": f"You are AQUARIA, a freshwater expert. Use this DATA: {context_data}"},
+            {"role": "system", "content": f"You are AQUARIA, a professional freshwater expert. Use this DATA: {context_data}"},
             {"role": "user", "content": prompt}
         ]
 
         try:
-            # Using the chat_completion loop
+            # chat_completion is the standard for Llama 3
             response_stream = client.chat_completion(
                 messages=messages,
                 max_tokens=500,
@@ -100,18 +104,22 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             )
 
             for message in response_stream:
-                # Adding a safety check for the response structure
-                if hasattr(message.choices[0], 'delta') and message.choices[0].delta.content:
-                    token = message.choices[0].delta.content
-                    full_response += token
-                    placeholder.markdown(full_response + "▌")
+                # Critical safety: check if the packet contains actual text
+                if message.choices and len(message.choices) > 0:
+                    delta = message.choices[0].delta
+                    if hasattr(delta, 'content') and delta.content:
+                        token = delta.content
+                        full_response += token
+                        placeholder.markdown(full_response + "▌")
             
             # Finalize response
             placeholder.markdown(full_response)
             
-            # Only append if we actually got a response to avoid 'index out of range'
+            # Only save to history if we actually got a response
             if full_response:
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
+            else:
+                st.error("The AI returned an empty response. Please try rephrasing.")
             
         except Exception as e:
-            st.error(f"Technical Error: {e}")
+            st.error(f"Technical Error: {e}")}")
