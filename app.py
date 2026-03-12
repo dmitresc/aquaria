@@ -8,23 +8,22 @@ from sentence_transformers import SentenceTransformer, util
 st.set_page_config(page_title="AQUARIA", layout="wide", page_icon="🐠")
 
 # --- 2. CONFIGURATION & SECRETS ---
-# Mixtral is generally more stable on the free tier
 MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
-    # .strip() is vital to remove hidden spaces from copy-pasting
+    # This pulls the token from the Streamlit Cloud Dashboard "Secrets" section
     HF_TOKEN = st.secrets["HF_TOKEN"].strip()
 except KeyError:
-    st.error("HF_TOKEN not found in Streamlit Secrets. Please check your Dashboard.")
+    st.error("HF_TOKEN not found in Streamlit Secrets. Go to 'Manage App' -> 'Settings' -> 'Secrets'.")
     st.stop()
 
-# Initialize Client with a long timeout
 client = InferenceClient(model=MODEL_ID, token=HF_TOKEN, timeout=180)
 
 # --- 3. DATA & RAG RESOURCES ---
 @st.cache_resource
 def init_resources():
+    # Force CPU for Streamlit Cloud compatibility
     embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
     df = pd.read_csv(csv_path, encoding="latin1").fillna("Not specified")
 
@@ -101,7 +100,5 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            if "401" in str(e):
-                st.error("Authentication Error: Please reboot the app or check if your HF_TOKEN is correct in the secrets tab.")
-            else:
-                st.error(f"Technical Error: {e}")
+            # Displays the real technical error (429, 503, etc.) for troubleshooting
+            st.error(f"Technical Error: {e}")
