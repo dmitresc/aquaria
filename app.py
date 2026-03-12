@@ -59,7 +59,7 @@ with st.sidebar:
         st.rerun()
 
 # --- 5. CHAT INTERFACE ---
-st.title("AQUARIA: Your Fishkeeping Assistant")
+st.title("AQUARIA: Your Freshwater Fishkeeping Assistant")
 
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Hello! I'm **AQUARIA** 🐠\n\nHow can I help you today?"}]
