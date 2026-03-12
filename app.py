@@ -9,7 +9,7 @@ st.set_page_config(page_title="AQUARIA", layout="wide")
 
 # --- 2. CONFIGURATION & SECRETS ---
 # We use the API so we don't crash the Streamlit Cloud RAM
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3" 
+MODEL_ID = "HuggingFaceH4/zephyr-7b-beta"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
