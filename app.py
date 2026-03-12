@@ -8,7 +8,8 @@ from sentence_transformers import SentenceTransformer, util
 st.set_page_config(page_title="AQUARIA", layout="wide", page_icon="🐠")
 
 # --- 2. CONFIGURATION & SECRETS ---
-MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+# Swapping to v0.3 which is explicitly supported as a chat model
+MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 csv_path = "freshwater_aquarium_fish_species.csv"
 
 try:
