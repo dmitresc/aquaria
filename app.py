@@ -63,47 +63,55 @@ for m in st.session_state.messages:
 
 # --- 6. CHAT INPUT & EXECUTION ---
 if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements..."):
+    # Add user message to history
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. RETRIEVAL
+        # 1. RETRIEVAL WITH SAFETY CHECK
         with st.spinner("Consulting the fish scrolls..."):
             query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu")
-            hits = util.semantic_search(query_emb, fish_embeddings, top_k=3)[0]
-            context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
+            search_results = util.semantic_search(query_emb, fish_embeddings, top_k=3)
+            
+            # Check if we actually got results back
+            if search_results and len(search_results[0]) > 0:
+                hits = search_results[0]
+                context_data = "\n\n".join([df.iloc[h["corpus_id"]]["combined_info"] for h in hits])
+            else:
+                context_data = "No specific data found in the database."
 
         # 2. GENERATION
         placeholder = st.empty()
         full_response = ""
         
-        # System instruction tailored for Llama 3
         messages = [
-            {
-                "role": "system", 
-                "content": f"You are AQUARIA, a professional freshwater expert. Answer the user based on this FISH DATA. If the data is missing info, give a general tip. DATA: {context_data}"
-            },
+            {"role": "system", "content": f"You are AQUARIA, a freshwater expert. Use this DATA: {context_data}"},
             {"role": "user", "content": prompt}
         ]
 
         try:
-            for message in client.chat_completion(
+            # Using the chat_completion loop
+            response_stream = client.chat_completion(
                 messages=messages,
                 max_tokens=500,
                 stream=True,
                 temperature=0.7
-            ):
-                token = message.choices[0].delta.content
-                if token:
+            )
+
+            for message in response_stream:
+                # Adding a safety check for the response structure
+                if hasattr(message.choices[0], 'delta') and message.choices[0].delta.content:
+                    token = message.choices[0].delta.content
                     full_response += token
                     placeholder.markdown(full_response + "▌")
             
+            # Finalize response
             placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+            # Only append if we actually got a response to avoid 'index out of range'
+            if full_response:
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            if "401" in str(e):
-                st.error("Authentication Error: Please update your HF_TOKEN in secrets and REBOOT the app.")
-            else:
-                st.error(f"Technical Error: {e}")
+            st.error(f"Technical Error: {e}")
