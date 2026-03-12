@@ -23,7 +23,6 @@ with st.sidebar:
     if os.path.exists("aquaria_logo.png"):
         st.image("aquaria_logo.png", use_container_width=True)
     
-    st.title("🌊 AQUARIA")
     st.markdown("---")
     st.info("🚀 **Mode:** API-Accelerated (Swift)")
     
