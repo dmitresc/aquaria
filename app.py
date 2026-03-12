@@ -72,7 +72,7 @@ if prompt := st.chat_input("Ask about fish, compatibility, or tank requirements.
         # 1. RETRIEVAL WITH SAFETY CHECK
         with st.spinner("Consulting the fish scrolls..."):
             query_emb = embedder.encode(prompt, convert_to_tensor=True, device="cpu")
-            search_results = util.semantic_search(query_emb, fish_embeddings, top_k=3)
+            search_results = util.semantic_search(query_emb, fish_embeddings, top_k=5)
             
             # Check if we actually got results back
             if search_results and len(search_results[0]) > 0:
